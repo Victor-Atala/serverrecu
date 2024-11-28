@@ -30,9 +30,43 @@ router.post('/login', async (req, res) => {
   res.json({ token });
 });
 
-// CRUD: Obtener usuarios
+// Obtener usuarios (sin contraseñas)
 router.get('/', (req, res) => {
-  res.json(users);
+  res.json(users.map(({ password, ...user }) => user)); // Excluir contraseñas
+});
+
+// Editar usuario
+router.put('/:username', async (req, res) => {
+  const { username } = req.params;
+  const { newUsername, newPassword } = req.body;
+
+  const user = users.find((u) => u.username === username);
+  if (!user) {
+    return res.status(404).send('Usuario no encontrado');
+  }
+
+  if (newUsername) {
+    user.username = newUsername;
+  }
+
+  if (newPassword) {
+    user.password = await bcrypt.hash(newPassword, 10);
+  }
+
+  res.status(200).send('Usuario actualizado');
+});
+
+// Eliminar usuario
+router.delete('/:username', (req, res) => {
+  const { username } = req.params;
+
+  const userIndex = users.findIndex((u) => u.username === username);
+  if (userIndex === -1) {
+    return res.status(404).send('Usuario no encontrado');
+  }
+
+  users.splice(userIndex, 1);
+  res.status(200).send('Usuario eliminado');
 });
 
 module.exports = router;
