@@ -1,72 +1,81 @@
-const express = require('express');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
-const router = express.Router();
+const UserList = ({ token }) => {
+  const [users, setUsers] = useState([]);
 
-const users = []; // Base de datos simulada
+  // Obtener usuarios al cargar el componente
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get('https://serverrecu.duckdns.org/users', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setUsers(response.data);
+      } catch (err) {
+        console.error(err);
+        alert('Error al obtener usuarios');
+      }
+    };
+    fetchUsers();
+  }, [token]);
 
-const SECRET = 'your_jwt_secret'; // Clave para JWT
+  // Manejar la edición de usuarios
+  const handleEdit = (id) => {
+    const newUsername = prompt('Ingrese el nuevo nombre de usuario:');
+    if (!newUsername) return;
 
-// Crear usuario
-router.post('/register', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).send('Datos incompletos');
+    const newPassword = prompt('Ingrese la nueva contraseña (opcional):');
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-  users.push({ username, password: hashedPassword });
-  res.status(201).send('Usuario registrado');
-});
+    axios
+      .put(
+        `https://serverrecu.duckdns.org/users/${id}`,
+        { newUsername, newPassword },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      .then(() => {
+        setUsers((prevUsers) =>
+          prevUsers.map((user) => (user.id === id ? { ...user, username: newUsername } : user))
+        );
+        alert('Usuario actualizado correctamente');
+      })
+      .catch((err) => {
+        console.error(err);
+        alert('Error al actualizar el usuario');
+      });
+  };
 
-// Login
-router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  const user = users.find((u) => u.username === username);
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(401).send('Credenciales incorrectas');
-  }
+  // Manejar la eliminación de usuarios
+  const handleDelete = async (id) => {
+    const confirmDelete = window.confirm('¿Estás seguro de que deseas eliminar este usuario?');
+    if (!confirmDelete) return;
 
-  const token = jwt.sign({ username }, SECRET, { expiresIn: '1h' });
-  res.json({ token });
-});
+    try {
+      await axios.delete(`https://serverrecu.duckdns.org/users/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers((prevUsers) => prevUsers.filter((user) => user.id !== id));
+      alert('Usuario eliminado correctamente');
+    } catch (err) {
+      console.error(err);
+      alert('Error al eliminar el usuario');
+    }
+  };
 
-// Obtener usuarios
-router.get('/', (req, res) => {
-  res.json(users);
-});
+  return (
+    <div>
+      <h2>Usuarios</h2>
+      <ul>
+        {users.map((user) => (
+          <li key={user.id}>
+            {user.username}{' '}
+            <button onClick={() => handleEdit(user.id)}>Editar</button>{' '}
+            <button onClick={() => handleDelete(user.id)}>Eliminar</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
 
-// Eliminar usuario
-router.delete('/:username', (req, res) => {
-  const { username } = req.params;
-
-  const userIndex = users.findIndex((u) => u.username === username);
-  if (userIndex === -1) {
-    return res.status(404).send('Usuario no encontrado');
-  }
-
-  users.splice(userIndex, 1);
-  res.status(200).send('Usuario eliminado');
-});
-
-// Editar usuario
-router.put('/:username', async (req, res) => {
-  const { username } = req.params;
-  const { newUsername, newPassword } = req.body;
-
-  const user = users.find((u) => u.username === username);
-  if (!user) {
-    return res.status(404).send('Usuario no encontrado');
-  }
-
-  if (newUsername) {
-    user.username = newUsername;
-  }
-
-  if (newPassword) {
-    user.password = await bcrypt.hash(newPassword, 10);
-  }
-
-  res.status(200).send('Usuario actualizado');
-});
-
-module.exports = router;
+export default UserList;
