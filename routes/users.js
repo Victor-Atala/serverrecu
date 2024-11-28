@@ -37,7 +37,7 @@ router.get('/', (req, res) => {
 
 // Editar usuario
 router.put('/:username', async (req, res) => {
-  const { username } = req.params;
+  const { username, password } = req.params;
   const { newUsername, newPassword } = req.body;
 
   const user = users.find((u) => u.username === username);
