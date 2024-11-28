@@ -1,81 +1,38 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+const express = require('express');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
-const UserList = ({ token }) => {
-  const [users, setUsers] = useState([]);
+const router = express.Router();
 
-  // Obtener usuarios al cargar el componente
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await axios.get('https://serverrecu.duckdns.org/users', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUsers(response.data);
-      } catch (err) {
-        console.error(err);
-        alert('Error al obtener usuarios');
-      }
-    };
-    fetchUsers();
-  }, [token]);
+const users = []; // Base de datos simulada
 
-  // Manejar la edición de usuarios
-  const handleEdit = (id) => {
-    const newUsername = prompt('Ingrese el nuevo nombre de usuario:');
-    if (!newUsername) return;
+const SECRET = 'your_jwt_secret'; // Clave para JWT
 
-    const newPassword = prompt('Ingrese la nueva contraseña (opcional):');
+// Crear usuario
+router.post('/register', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).send('Datos incompletos');
 
-    axios
-      .put(
-        `https://serverrecu.duckdns.org/users/${id}`,
-        { newUsername, newPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      .then(() => {
-        setUsers((prevUsers) =>
-          prevUsers.map((user) => (user.id === id ? { ...user, username: newUsername } : user))
-        );
-        alert('Usuario actualizado correctamente');
-      })
-      .catch((err) => {
-        console.error(err);
-        alert('Error al actualizar el usuario');
-      });
-  };
+  const hashedPassword = await bcrypt.hash(password, 10);
+  users.push({ username, password: hashedPassword });
+  res.status(201).send('Usuario registrado');
+});
 
-  // Manejar la eliminación de usuarios
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm('¿Estás seguro de que deseas eliminar este usuario?');
-    if (!confirmDelete) return;
+// Login
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  const user = users.find((u) => u.username === username);
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    return res.status(401).send('Credenciales incorrectas');
+  }
 
-    try {
-      await axios.delete(`https://serverrecu.duckdns.org/users/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUsers((prevUsers) => prevUsers.filter((user) => user.id !== id));
-      alert('Usuario eliminado correctamente');
-    } catch (err) {
-      console.error(err);
-      alert('Error al eliminar el usuario');
-    }
-  };
+  const token = jwt.sign({ username }, SECRET, { expiresIn: '1h' });
+  res.json({ token });
+});
 
-  return (
-    <div>
-      <h2>Usuarios</h2>
-      <ul>
-        {users.map((user) => (
-          <li key={user.id}>
-            {user.username}{' '}
-            <button onClick={() => handleEdit(user.id)}>Editar</button>{' '}
-            <button onClick={() => handleDelete(user.id)}>Eliminar</button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
+// CRUD: Obtener usuarios
+router.get('/', (req, res) => {
+  res.json(users);
+});
 
-export default UserList;
+module.exports = router;
