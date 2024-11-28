@@ -15,8 +15,8 @@ app.use('/users', userRoutes);
 
 // Cargar certificados
 const options = {
-  key: fs.readFileSync('./cert/key.pem'),
-  cert: fs.readFileSync('./cert/cert.pem'),
+  key: fs.readFileSync('/etc/letsencrypt/live/serverrecu.duckdns.org/privkey.pem'),
+  cert: fs.readFileSync('/etc/letsencrypt/live/serverrecu.duckdns.org/fullchain.pem'),
 };
 
 // Servidor HTTPS
