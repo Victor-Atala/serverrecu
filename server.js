@@ -2,9 +2,13 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const https = require('https');
+const cors = require('cors'); // Importar el paquete cors
 
 const app = express();
 const PORT = 3000;
+
+// Habilitar CORS para todos los orígenes
+app.use(cors());
 
 // Middlewares
 app.use(bodyParser.json());
