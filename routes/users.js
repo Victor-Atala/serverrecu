@@ -30,7 +30,7 @@ router.post('/login', async (req, res) => {
   res.json({ token });
 });
 
-// Obtener usuarios (sin contraseñas)
+// Obtener usuarios (excluir contraseñas)
 router.get('/', (req, res) => {
   res.json(users.map(({ password, ...user }) => user)); // Excluir contraseñas
 });
@@ -46,6 +46,9 @@ router.put('/:username', async (req, res) => {
   }
 
   if (newUsername) {
+    if (users.some((u) => u.username === newUsername)) {
+      return res.status(400).send('El nuevo nombre de usuario ya existe');
+    }
     user.username = newUsername;
   }
 
