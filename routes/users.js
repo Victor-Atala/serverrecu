@@ -32,7 +32,7 @@ router.post('/login', async (req, res) => {
 
 // Obtener usuarios (excluir contraseñas)
 router.get('/', (req, res) => {
-  res.json(users.map(({ password, ...user }) => user)); // Excluir contraseñas
+  res.json(users.map(({ password, ...user }) => user)); // No incluir contraseñas
 });
 
 // Editar usuario
